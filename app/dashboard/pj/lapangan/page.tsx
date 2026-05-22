@@ -377,20 +377,20 @@ const [reportHistory, setReportHistory] = useState<any>({});
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Foto Lokasi
-                </label>
-                <div className="ww-full border rounded-lg px-3 py-2 mt-1">
-                  <p className="text-sm text-gray-600">
-                  </p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </div>
+                <label className="w-full border rounded-lg px-3 py-3 mt-1 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50">
+  <Image size={16} />
+  <span className="text-sm text-gray-600">
+    Klik untuk upload foto
+  </span>
+
+  <input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={handlePhotoUpload}
+    className="hidden"
+  />
+</label>
               </div>
             </div>
 
@@ -484,20 +484,20 @@ const [reportHistory, setReportHistory] = useState<any>({});
 
         {/* UPLOAD FOTO */}
         <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Foto Lokasi
-                </label>
-                <div className="ww-full border rounded-lg px-3 py-2 mt-1">
-                  <p className="text-sm text-gray-600">
-                  </p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </div>
+                <label className="w-full border rounded-lg px-3 py-3 mt-1 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50">
+  <Camera size={16} />
+  <span className="text-sm text-gray-600">
+    Upload Foto Dokumentasi
+  </span>
+
+  <input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={handleReportPhoto}
+    className="hidden"
+  />
+</label>
               </div>
 
         {/* PREVIEW */}
@@ -548,36 +548,91 @@ const [reportHistory, setReportHistory] = useState<any>({});
       <div className="p-5 space-y-4 overflow-y-auto">
 
         {(reportHistory[selectedProject] || []).map((r: any, i: number) => (
-          <div key={i} className="border rounded-lg p-4">
+  <div
+    key={i}
+    className="border rounded-2xl p-4 bg-white"
+  >
+    {/* HEADER */}
+    <div className="flex justify-between items-start mb-4">
 
-            <div className="flex justify-between mb-2">
-              <span>{r.date}</span>
-              <span className="text-[#1E3A8A] font-semibold">
-                {r.progress}%
-              </span>
+      <div className="flex items-start gap-3">
+
+        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+          <FileText size={18} className="text-[#1E3A8A]" />
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-800">
+            {r.date}
+          </h3>
+
+          <p className="text-sm text-gray-500">
+            {r.photos?.length || 0} foto dokumentasi
+          </p>
+        </div>
+
+      </div>
+
+      <div className="bg-blue-100 text-[#1E3A8A] text-xs px-3 py-1 rounded-full font-medium">
+        {r.progress}% Progress
+      </div>
+    </div>
+
+    {/* DETAIL */}
+    <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+
+      <div>
+        <p className="text-gray-500 mb-1">Aktivitas</p>
+        <p className="text-gray-800">{r.activity}</p>
+      </div>
+
+      <div>
+        <p className="text-gray-500 mb-1">Cuaca</p>
+        <p className="text-gray-800">{r.weather}</p>
+      </div>
+
+    </div>
+
+    {/* CATATAN */}
+    {r.notes && (
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-lg mb-4">
+        <p className="text-sm text-gray-700">
+          {r.notes}
+        </p>
+      </div>
+    )}
+
+    {/* FOTO */}
+    {r.photos?.length > 0 && (
+      <div>
+        <p className="text-sm text-gray-500 mb-3">
+          Foto Dokumentasi ({r.photos.length})
+        </p>
+
+        <div className="grid grid-cols-4 gap-3">
+
+          {r.photos.slice(0, 4).map((img: string, idx: number) => (
+            <img
+              key={idx}
+              src={img}
+              className="w-full h-32 object-cover rounded-xl border"
+            />
+          ))}
+
+          {r.photos.length > 4 && (
+            <div className="h-32 rounded-xl border border-dashed flex flex-col items-center justify-center text-gray-500 text-sm">
+              <p className="font-semibold">
+                +{r.photos.length - 4}
+              </p>
+              <p>Foto</p>
             </div>
+          )}
 
-            <p className="text-sm mb-2">{r.activity}</p>
-
-            <p className="text-xs text-gray-500 mb-2">
-              Cuaca: {r.weather}
-            </p>
-
-            {r.notes && (
-              <div className="bg-yellow-50 p-2 text-sm rounded mb-2">
-                {r.notes}
-              </div>
-            )}
-
-            {/* FOTO */}
-            <div className="grid grid-cols-4 gap-2">
-              {r.photos?.map((img: string, idx: number) => (
-                <img key={idx} src={img} className="rounded" />
-              ))}
-            </div>
-
-          </div>
-        ))}
+        </div>
+      </div>
+    )}
+  </div>
+))}
 
         {(!reportHistory[selectedProject] ||
           reportHistory[selectedProject].length === 0) && (

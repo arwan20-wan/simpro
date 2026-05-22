@@ -6,7 +6,7 @@ export default function NavbarPJ() {
 
       {/* LEFT */}
       <h1 className="text-lg font-semibold text-gray-800">
-        Dashboard Penanggung Jawab
+        Selamat datang Penanggung Jawab
       </h1>
 
       {/* RIGHT */}

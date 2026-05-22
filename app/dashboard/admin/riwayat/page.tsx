@@ -2,14 +2,42 @@
 
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
-import { getRiwayat } from "@/app/store/riwayatStore";
+import API from "@/services/api";
 import { UserPlus, Pencil, Trash2 } from "lucide-react";
 
+type RiwayatItem = {
+  id: number;
+  type: "tambah" | "edit" | "hapus";
+  title: string;
+  desc: string | null;
+  admin_name: string;
+  target_name: string;
+  target_employee_id: string | null;
+  time: string | null;
+  tanggal: string | null;
+};
+
 export default function RiwayatPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<RiwayatItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setData(getRiwayat());
+    const loadRiwayat = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await API.get("/admin/activity-logs");
+        setData(response.data.data ?? []);
+      } catch {
+        setError("Gagal memuat riwayat aktivitas. Pastikan sudah login sebagai Admin.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRiwayat();
   }, []);
 
   // ICON
@@ -49,14 +77,24 @@ export default function RiwayatPage() {
           Riwayat Aktivitas
         </h1>
         <p className="text-sm text-gray-500">
-          Semua aktivitas sistem akan tercatat di sini
+          Semua aktivitas tambah, edit, dan hapus data karyawan tercatat di sini
         </p>
       </div>
 
       {/* CARD */}
       <div className="bg-white rounded-2xl shadow-sm border p-6 min-h-[300px]">
 
-        {data.length === 0 ? (
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center h-[200px] text-sm text-gray-500">
+            Memuat riwayat aktivitas...
+          </div>
+        ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-[200px] text-sm text-gray-500">
             Belum ada aktivitas
           </div>
@@ -65,7 +103,7 @@ export default function RiwayatPage() {
 
             {data.map((item, index) => (
               <div
-                key={index}
+                key={item.id ?? index}
                 className="flex items-start justify-between border-b pb-3 last:border-none"
               >
 
@@ -82,13 +120,17 @@ export default function RiwayatPage() {
                     <p className="text-xs text-gray-500">
                       {item.desc}
                     </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Oleh {item.admin_name} {item.target_employee_id ? `- ID ${item.target_employee_id}` : ""}
+                    </p>
                   </div>
 
                 </div>
 
-                <p className="text-xs text-gray-500">
-                  {item.time}
-                </p>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">{item.time}</p>
+                  <p className="text-xs text-gray-400">{item.tanggal}</p>
+                </div>
 
               </div>
             ))}

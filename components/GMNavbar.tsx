@@ -6,7 +6,7 @@ export default function GMNavbar() {
 
       {/* LEFT */}
       <h1 className="text-lg font-semibold text-gray-800">
-        Dashboard General Manager
+        Selamat datang General Manager
       </h1>
 
       {/* RIGHT */}
