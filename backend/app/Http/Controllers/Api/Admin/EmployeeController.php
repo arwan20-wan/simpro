@@ -37,6 +37,7 @@ class EmployeeController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'position' => ['required', Rule::in(['Penanggung Jawab', 'General Manager'])],
             'address' => ['nullable', 'string'],
+            'birth_date' => ['nullable', 'date'],
             'is_active' => ['required', 'boolean'],
         ]);
 
@@ -49,6 +50,7 @@ class EmployeeController extends Controller
             'phone' => $data['phone'] ?? null,
             'position' => $data['position'],
             'address' => $data['address'] ?? null,
+            'birth_date' => $data['birth_date'] ?? null,
             'role' => $role,
             'is_active' => $data['is_active'],
             'password' => Hash::make('123456'),
@@ -73,6 +75,7 @@ class EmployeeController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'position' => ['required', Rule::in(['Penanggung Jawab', 'General Manager'])],
             'address' => ['nullable', 'string'],
+            'birth_date' => ['nullable', 'date'],
             'is_active' => ['required', 'boolean'],
         ]);
 
@@ -82,6 +85,7 @@ class EmployeeController extends Controller
             'phone' => $user->phone,
             'position' => $user->position,
             'address' => $user->address,
+            'birth_date' => $user->birth_date?->toDateString(),
             'is_active' => $user->is_active,
         ];
 
@@ -91,6 +95,7 @@ class EmployeeController extends Controller
             'phone' => $data['phone'] ?? null,
             'position' => $data['position'],
             'address' => $data['address'] ?? null,
+            'birth_date' => $data['birth_date'] ?? null,
             'role' => $this->roleFromPosition($data['position']),
             'is_active' => $data['is_active'],
         ]);
@@ -210,6 +215,7 @@ class EmployeeController extends Controller
             'position' => $user->position,
             'role' => $user->role,
             'address' => $user->address,
+            'birth_date' => $user->birth_date?->toDateString(),
             'status' => $user->is_active ? 'Aktif' : 'Nonaktif',
             'is_active' => $user->is_active,
             'joined_at' => $user->created_at?->translatedFormat('d M Y'),

@@ -33,13 +33,24 @@ export default function Login() {
       localStorage.setItem("simpro_user", JSON.stringify(response.data.user));
       router.push(response.data.redirect_to);
     } catch (err: unknown) {
+      console.error('Login error raw:', err);
       const data = axios.isAxiosError<LoginErrorResponse>(err)
         ? err.response?.data
         : undefined;
-      const message =
-        data?.message ||
-        data?.errors?.username?.[0] ||
-        "Login gagal. Periksa username dan password.";
+      console.debug('Login error response data:', data);
+
+      let message = 'Login gagal. Periksa username dan password.';
+
+      if (data) {
+        if (data.message) {
+          message = data.message;
+        } else if (data.errors) {
+          const errs = Object.values(data.errors).flat();
+          if (errs.length) message = errs.join(' ');
+        } else {
+          message = JSON.stringify(data);
+        }
+      }
 
       setError(message);
     } finally {

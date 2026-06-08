@@ -14,6 +14,7 @@ type Employee = {
   phone: string | null;
   position: "Penanggung Jawab" | "General Manager";
   address: string | null;
+  birth_date: string | null;
   status: "Aktif" | "Nonaktif";
   is_active: boolean;
   joined_at: string | null;
@@ -24,8 +25,7 @@ type EmployeeForm = {
   email: string;
   phone: string;
   position: "" | "Penanggung Jawab" | "General Manager";
-  address: string;
-  is_active: boolean;
+  address: string;  birthDate: string;  is_active: boolean;
 };
 
 type ApiError = {
@@ -39,6 +39,7 @@ const emptyForm: EmployeeForm = {
   phone: "",
   position: "",
   address: "",
+  birthDate: "",
   is_active: true,
 };
 
@@ -101,6 +102,7 @@ export default function DataKaryawan() {
             phone: employee.phone ?? "",
             position: employee.position,
             address: employee.address ?? "",
+            birthDate: employee.birth_date ?? "",
             is_active: employee.is_active,
           }
         : emptyForm
@@ -125,6 +127,7 @@ export default function DataKaryawan() {
         phone: form.phone || null,
         position: form.position,
         address: form.address || null,
+        birth_date: form.birthDate || null,
         is_active: form.is_active,
       };
 
@@ -345,6 +348,16 @@ export default function DataKaryawan() {
                   className="w-full border rounded-lg px-3 py-2 mt-1"
                   value={form.phone}
                   onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-600">Tanggal Lahir</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-lg px-3 py-2 mt-1"
+                  value={form.birthDate}
+                  onChange={(event) => setForm({ ...form, birthDate: event.target.value })}
                 />
               </div>
 

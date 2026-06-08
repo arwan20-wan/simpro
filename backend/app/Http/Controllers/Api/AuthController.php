@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -20,9 +21,11 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $inputUsername = trim($credentials['username']);
+
         $user = User::query()
-            ->where('username', $credentials['username'])
-            ->orWhere('email', $credentials['username'])
+            ->whereRaw('LOWER(username) = ?', [strtolower($inputUsername)])
+            ->orWhereRaw('LOWER(email) = ?', [strtolower($inputUsername)])
             ->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
@@ -53,9 +56,11 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $inputUsername = trim($credentials['username']);
+
         $user = User::query()
-            ->where('username', $credentials['username'])
-            ->orWhere('email', $credentials['username'])
+            ->whereRaw('LOWER(username) = ?', [strtolower($inputUsername)])
+            ->orWhereRaw('LOWER(email) = ?', [strtolower($inputUsername)])
             ->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
@@ -101,8 +106,36 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateProfilePhoto(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'profile_photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120'],
+        ]);
+
+        $user = $request->user();
+        $oldPath = $user->profile_photo_path;
+        $path = $validated['profile_photo']->store('profile-photos', 'public');
+
+        $user->update([
+            'profile_photo_path' => $path,
+        ]);
+
+        if ($oldPath && $oldPath !== $path) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return response()->json([
+            'message' => 'Foto profil berhasil diperbarui.',
+            'user' => $this->userPayload($user->refresh()),
+        ]);
+    }
+
     private function userPayload(User $user): array
     {
+        $profilePhotoUrl = $user->profile_photo_path
+            ? Storage::disk('public')->url($user->profile_photo_path)
+            : null;
+
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -110,6 +143,10 @@ class AuthController extends Controller
             'email' => $user->email,
             'role' => $user->role,
             'position' => $user->position,
+            'phone' => $user->phone,
+            'address' => $user->address,
+            'birth_date' => $user->birth_date?->toDateString(),
+            'profile_photo_url' => $profilePhotoUrl,
         ];
     }
 

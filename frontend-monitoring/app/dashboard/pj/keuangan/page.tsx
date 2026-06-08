@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PJLayout from "@/components/PJLayout";
 import { Plus, Download, Upload, Wallet,  Eye } from "lucide-react";
+import API from '@/services/api';
 
 export default function PJKeuangan() {
   const [showModal, setShowModal] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
 
 const [zoom, setZoom] = useState(1);
@@ -35,63 +37,69 @@ const handleMouseUp = () => {
   setIsDragging(false);
 };
 
+const isPreviewableFile = (url: string) => {
+  return /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(url);
+};
 
-const handleDownload = (file: any, name: string) => {
-  if (!file) return;
+const getFileNameFromUrl = (url: string) => {
+  const parts = url.split('/');
+  return parts[parts.length - 1] || 'file';
+};
 
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(file);
-  link.download = name;
-  link.click();
+const handleViewReceipt = (receiptUrl: string) => {
+  if (isPreviewableFile(receiptUrl)) {
+    setPreviewFile(receiptUrl);
+    return;
+  }
+  window.open(receiptUrl, '_blank');
+};
+
+const handleDownloadReceipt = async (receiptUrl: string) => {
+  try {
+    const response = await fetch(receiptUrl);
+    if (!response.ok) throw new Error('Failed to fetch file');
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = getFileNameFromUrl(receiptUrl);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Download error:', err);
+    alert('Gagal mengunduh file.');
+  }
 };
 
 const [previewFile, setPreviewFile] = useState<string | null>(null);
 
   // ================= DATA PROJECT =================
-const projects = [
-  {
-    name: "Gedung Perkantoran",
-    budget: 500000000,
-  },
-  {
-    name: "Renovasi Perumahan",
-    budget: 300000000,
-  },
-];
+const [projects, setProjects] = useState<any[]>([]);
 
 // ================= DATA TRANSAKSI =================
-const [transactions, setTransactions] = useState<Transaction[]>([
-  {
-    date: "12 Mar 2026",
-    project: "Gedung Perkantoran",
-    description: "Pembelian semen",
-    amount: 200000000,
-    receipt: null,
-    receiptUrl: null,
-  },
-]);
+const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const getProjectStatus = (projectName: string) => {
-  const project = projects.find(p => p.name === projectName);
+  const project = projects.find((p) => p.name === projectName || p.id === projectName);
   if (!project) return { text: "-", color: "" };
 
-  // total pengeluaran project itu
-  const totalUsed = transactions
-    .filter(t => t.project === projectName)
-    .reduce((sum, t) => sum + t.amount, 0);
+  const status = project.status ?? projectStatusFromRatio(project.used ?? 0, project.budget ?? 0);
 
-  const percent = (totalUsed / project.budget) * 100;
-
-  if (percent >= 100) {
-    return { text: "Bahaya", color: "bg-red-100 text-red-600" };
-  }
-
-  if (percent >= 80) {
-    return { text: "Rawan", color: "bg-yellow-100 text-yellow-600" };
-  }
-
-  return { text: "Aman", color: "bg-green-100 text-green-600" };
+  if (status === 'aman') return { text: 'Aman', color: 'bg-green-100 text-green-600' };
+  if (status === 'perhatian') return { text: 'Rawan', color: 'bg-yellow-100 text-yellow-600' };
+  return { text: 'Bahaya', color: 'bg-red-100 text-red-600' };
 };
+
+const projectStatusFromRatio = (used: number, budget: number) => {
+  if (!budget || budget <= 0) return 'tidak aman';
+  const ratio = used / budget;
+  if (ratio <= 0.7) return 'aman';
+  if (ratio <= 1.0) return 'perhatian';
+  return 'tidak aman';
+}
 
 
   // ================= FILE =================
@@ -100,6 +108,47 @@ const [transactions, setTransactions] = useState<Transaction[]>([
       setReceiptFile(e.target.files[0]);
     }
   };
+
+  // ============== FETCH FROM API ==============
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const summaryRes = await API.get('/pj/finance/summary');
+        const txRes = await API.get('/pj/finance/transactions');
+
+        const today = new Date().toISOString().split('T')[0];
+        setForm((prev) => ({ ...prev, date: prev.date || today }));
+
+        const proj = (summaryRes.data.projects || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          location: p.location,
+          budget: p.budget,
+          used: p.used,
+          status: p.status,
+        }));
+
+        setProjects(proj);
+
+        const mappedTx = (txRes.data.data || []).map((t: any) => ({
+          date: t.transaction_date,
+          project: t.project.name,
+          projectId: t.project.id,
+          description: t.description,
+          amount: t.amount,
+          receipt: null,
+          receiptUrl: t.receipt_url ? t.receipt_url : null,
+          status: t.status,
+        } as Transaction));
+
+        setTransactions(mappedTx);
+      } catch (err) {
+        console.error('Fetch error:', err);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // ================= HITUNG TOTAL =================
 
@@ -133,35 +182,68 @@ const handleChange = (e: any) => {
 
 const handleAddTransaction = () => {
   if (!form.project || !form.amount) {
-    alert("Data belum lengkap!");
+    alert("Data belum lengkap! Pilih proyek dan masukkan jumlah.");
     return;
   }
 
-  const newData = {
-  date: form.date,
-  project: form.project,
-  description: form.description,
-  amount: Number(form.amount),
+  const submit = async () => {
+    try {
+      setIsLoading(true);
+      
+      const token = typeof window !== 'undefined' ? localStorage.getItem('simpro_token') : null;
+      console.log('Token:', token);
+      
+      if (!token) {
+        alert('Token tidak ditemukan. Silakan login kembali.');
+        return;
+      }
 
-  // 🔥 WAJIB ADA KOMA SEBELUM INI
-  receipt: receiptFile,
-  receiptUrl: receiptFile
-    ? URL.createObjectURL(receiptFile)
-    : null,
-};
+      const formData = new FormData();
+      formData.append('project_id', form.project);
+      formData.append('transaction_date', form.date || new Date().toISOString().slice(0,10));
+      formData.append('type', 'expense');
+      formData.append('category', form.description || 'Pengeluaran');
+      formData.append('description', form.description || '');
+      formData.append('amount', String(form.amount));
+      if (receiptFile) {
+        console.log('Receipt file:', receiptFile.name, receiptFile.size);
+        formData.append('receipt', receiptFile);
+      }
 
-  setTransactions([...transactions, newData]);
+      console.log('Submitting transaction...');
+      const res = await API.post('/pj/finance/transactions', formData);
+      
+      console.log('Success response:', res.data);
 
-  // reset
-  setForm({
-    date: "",
-    project: "",
-    description: "",
-    amount: "",
-  });
+      const txRes = await API.get('/pj/finance/transactions');
+      const mappedTx = (txRes.data.data || []).map((t: any) => ({
+        date: t.transaction_date,
+        project: t.project.name,
+        projectId: t.project.id,
+        description: t.description,
+        amount: t.amount,
+        receipt: null,
+        receiptUrl: t.receipt_url || null,
+        status: t.status,
+      } as Transaction));
 
-   setReceiptFile(null);
-  setShowModal(false);
+      setTransactions(mappedTx);
+
+      setForm({ date: '', project: '', description: '', amount: '' });
+      setReceiptFile(null);
+      setShowModal(false);
+      alert('Pengeluaran berhasil disimpan!');
+    } catch (err: any) {
+      console.error('Full error:', err);
+      console.error('Error response:', err?.response?.data);
+      const message = err?.response?.data?.message || err?.response?.data?.errors?.project_id?.[0] || err?.message || 'Gagal menyimpan transaksi';
+      alert(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  submit();
 };
 
 
@@ -274,7 +356,7 @@ type Transaction = {
   {/* VIEW */}
   <button
     disabled={!t.receiptUrl}
-    onClick={() => setPreviewFile(t.receiptUrl!)}
+    onClick={() => handleViewReceipt(t.receiptUrl!)}
     className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-30"
     title="Lihat"
   >
@@ -283,8 +365,8 @@ type Transaction = {
 
   {/* DOWNLOAD */}
   <button
-    disabled={!t.receipt}
-    onClick={() => handleDownload(t.receipt, "bukti-transaksi")}
+    disabled={!t.receiptUrl}
+    onClick={() => handleDownloadReceipt(t.receiptUrl!)}
     className="p-2 border rounded-lg hover:bg-gray-100 disabled:opacity-30"
     title="Unduh"
   >
@@ -371,13 +453,13 @@ type Transaction = {
         {/* MODAL */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white w-[700px] rounded-xl max-h-[85vh] flex flex-col">
+            <div className="bg-white w-full max-w-2xl rounded-xl max-h-[90vh] overflow-y-auto flex flex-col">
 
-              <div className="p-6 border-b font-semibold text-xl text-gray-800">
+              <div className="p-6 border-b font-semibold text-xl text-gray-800 sticky top-0 bg-white">
                 Tambah Pengeluaran
               </div>
             
-              <div className="p-6 space-y-4 text-sm">
+              <div className="p-6 space-y-5 text-sm flex-1">
                  <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tanggal
@@ -387,7 +469,7 @@ type Transaction = {
                     name="date"
                     value={form.date}
                     onChange={handleChange}
-                    className="w-full border p-2 rounded-lg"
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
                  <div>
@@ -395,16 +477,16 @@ type Transaction = {
                   Lokasi Proyek
                 </label>
                 <select
-  name="project"
-  value={form.project}
-  onChange={handleChange}
-  className="w-full border p-2 rounded-lg"
->
-  <option value="">Pilih Proyek</option>
-  {projects.map((p, i) => (
-    <option key={i}>{p.name}</option>
-  ))}
-</select>
+                  name="project"
+                  value={form.project}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Pilih Proyek --</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}{p.location ? ` - ${p.location}` : ''}</option>
+                  ))}
+                </select>
               </div>
 
                  <div>
@@ -412,24 +494,28 @@ type Transaction = {
                   Deskripsi
                 </label>
                 <textarea
-                 name="description"
-                 value={form.description}
-                 onChange={handleChange}
-                 className="w-full border p-2 rounded"
-                 placeholder="Tuliskan deskripsi pengeluaran"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Tuliskan deskripsi pengeluaran"
+                  rows={3}
                 />
                 </div>
 
                 <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Jumlah (Rp)
                 </label>
                 <input
                   type="number"
                   name="amount"
+                  value={form.amount}
                   onChange={handleChange}
-                  className="w-full border p-2 rounded"
-                  placeholder="Masukkan Jumlah pengeluaran"
+                  className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Masukkan jumlah pengeluaran"
+                  min="0"
+                  step="1"
                 />
                 </div>
 
@@ -438,29 +524,57 @@ type Transaction = {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Upload Bukti Transaksi / Nota
                 </label>
-                <div className="ww-full border rounded-lg px-3 py-2 mt-1">
-                  <p className="text-sm text-gray-600">
-                  </p>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </div>
+                <input
+                  type="file"
+                  id="receipt-upload"
+                  accept="image/*,.pdf,.doc,.docx"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="receipt-upload"
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-4 py-6 mt-1 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <p className="text-sm font-medium text-gray-700">Pilih file atau drag & drop</p>
+                  <p className="text-xs text-gray-500">PNG, JPG, PDF (max 10MB)</p>
+                  {receiptFile && (
+                    <p className="text-xs text-green-600 mt-2">✓ {receiptFile.name}</p>
+                  )}
+                </label>
               </div>
               </div>
 
-              <div className="flex justify-end gap-3 p-6 border-t border-gray-200 flex">
-                <button onClick={() => setShowModal(false)}>Batal</button>
+              <div className="flex justify-end gap-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowModal(false)}
+                  disabled={isLoading}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Batal
+                </button>
 
                 <button
-  onClick={handleAddTransaction}
-  className="bg-[#1E3A8A] text-white px-4 py-2 rounded-lg"
->
-  Simpan
-</button>
+                  onClick={handleAddTransaction}
+                  disabled={isLoading}
+                  className="bg-[#1E3A8A] text-white px-6 py-2 rounded-lg hover:bg-[#1a2f6b] transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Menyimpan...
+                    </>
+                  ) : (
+                    'Simpan'
+                  )}
+                </button>
               </div>
 
             </div>

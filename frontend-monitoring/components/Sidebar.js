@@ -6,8 +6,10 @@ import {
   LayoutDashboard,
   Users,
   History,
+  User,
   LogOut,
 } from "lucide-react";
+import { logout } from "@/services/auth";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -27,6 +29,11 @@ export default function Sidebar() {
       name: "Riwayat",
       href: "/dashboard/admin/riwayat",
       icon: History,
+    },
+    {
+      name: "Profil",
+      href: "/dashboard/admin/profil",
+      icon: User,
     },
   ];
 
@@ -75,7 +82,10 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div className="p-4 border-t border-blue-400">
-        <button className="flex items-center gap-2 text-white hover:text-gray-200 transition">
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 text-white hover:text-gray-200 transition"
+        >
           <LogOut size={18} />
           <span className="text-sm">Keluar</span>
         </button>

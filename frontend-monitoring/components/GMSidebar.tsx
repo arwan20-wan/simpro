@@ -8,6 +8,7 @@ import {
   User,
   LogOut,
 } from "lucide-react";
+import { logout } from "@/services/auth";
 
 export default function GMSidebar() {
   const pathname = usePathname();
@@ -75,7 +76,10 @@ export default function GMSidebar() {
 
       {/* LOGOUT */}
       <div className="p-4 border-t border-blue-700">
-        <button className="flex items-center gap-2 text-white hover:text-gray-200">
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 text-white hover:text-gray-200"
+        >
           <LogOut size={18} />
           <span className="text-sm">Keluar</span>
         </button>

@@ -29,6 +29,8 @@ class User extends Authenticatable
         'phone',
         'position',
         'address',
+        'birth_date',
+        'profile_photo_path',
         'is_active',
         'password',
     ];
@@ -48,6 +50,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
+            'birth_date' => 'date',
             'password' => 'hashed',
         ];
     }
