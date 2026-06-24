@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PJ\ProjectController;
 use App\Http\Controllers\Api\PJ\DailyReportController;
 use App\Http\Controllers\Api\PJ\ProjectPhotoController;
 use App\Http\Controllers\Api\PJ\FinancialTransactionController;
+use App\Http\Controllers\Api\GM\ReportController as GMReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -49,5 +50,13 @@ Route::middleware('auth.token')->group(function () {
         Route::post('/finance/transactions', [FinancialTransactionController::class, 'store']);
         Route::get('/finance/transactions/{transaction}/receipt', [FinancialTransactionController::class, 'viewReceipt']);
         Route::get('/finance/transactions/{transaction}/receipt/download', [FinancialTransactionController::class, 'downloadReceipt']);
+    });
+
+    Route::prefix('gm')->group(function () {
+        Route::get('/dashboard', [GMReportController::class, 'dashboard']);
+        Route::get('/reports/projects', [GMReportController::class, 'projects']);
+        Route::get('/reports/daily', [GMReportController::class, 'dailyReports']);
+        Route::get('/reports/finance', [GMReportController::class, 'financialReports']);
+        Route::get('/reports/finance/{transaction}/download', [GMReportController::class, 'downloadFinancialReport']);
     });
 });

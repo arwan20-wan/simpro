@@ -52,18 +52,29 @@ export default function DashboardPJ() {
 
       const data = projectsResponse.data.data || [];
       setProjects(
-        data.map((p: ProjectResponse) => ({
-          id: p.id,
-          nama: p.name,
-          progress: p.progress ?? 0,
-          status: 
-            p.progress === 100 || p.status === "completed" ? "Selesai" :
-            p.progress >= 50 ? "Sedang" : "Tertunda",
-          warna: 
-            p.progress === 100 || p.status === "completed" ? "bg-green-100 text-green-600" :
-            p.progress >= 50 ? "bg-blue-100 text-blue-600" : "bg-red-100 text-red-600",
-          deadline: p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID') : "Belum ditentukan",
-        }))
+        data.map((p: ProjectResponse) => {
+          const progress = p.progress ?? 0;
+          const isCompleted = progress === 100 || p.status === "completed";
+
+          return {
+            id: p.id,
+            nama: p.name,
+            progress,
+            status: isCompleted
+              ? "Selesai"
+              : progress >= 50
+                ? "Sedang"
+                : "Tertunda",
+            warna: isCompleted
+              ? "bg-green-100 text-green-600"
+              : progress >= 50
+                ? "bg-blue-100 text-blue-600"
+                : "bg-red-100 text-red-600",
+            deadline: p.end_date
+              ? new Date(p.end_date).toLocaleDateString('id-ID')
+              : "Belum ditentukan",
+          };
+        })
       );
 
       setReportSummary({
@@ -109,6 +120,7 @@ export default function DashboardPJ() {
     {
       label: "Proyek Selesai",
       value: String(projects.filter(p => p.progress === 100).length),
+      sub: null,
       subColor: "text-green-600",
       iconBg: "bg-purple-50",
       icon: "✔️",
